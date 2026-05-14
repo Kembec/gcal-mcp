@@ -37,6 +37,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish to npm (@kembec/gcal-mcp)
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           VERSION="${{ github.ref_name }}"
           if [[ "$VERSION" == *"-"* ]]; then
