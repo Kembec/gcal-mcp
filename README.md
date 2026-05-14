@@ -1,22 +1,18 @@
 # gcal-mcp
 
-Fork of [nspady/google-calendar-mcp](https://github.com/nspady/google-calendar-mcp) (`@cocal/google-calendar-mcp`) with security patches and OpenClaw compatibility. The original design, implementation, and multi-account OAuth flow are by the upstream author — all credit is his.
+MCP server for Google Calendar. Fork of `@cocal/google-calendar-mcp` with security patches and OpenClaw support.
 
-This fork adds: 7 CVEs resolved (`npm audit fix`), CSRF fix in the HTTP transport, and a ready-to-use OpenClaw config block. See [SECURITY_AUDIT.md](./SECURITY_AUDIT.md) and [OPENCLAW.md](./OPENCLAW.md).
-
-## What it does
-
-Exposes Google Calendar as MCP tools: read events, create, update, delete, respond to invitations, check availability. Supports multiple accounts in parallel — useful if you manage work and personal separately.
+This fork adds: 7 CVEs fixed, CSRF patch on the HTTP transport, and a ready-to-use OpenClaw config. See [SECURITY_AUDIT.md](./SECURITY_AUDIT.md) and [OPENCLAW.md](./OPENCLAW.md).
 
 ## Installation
 
-You need an OAuth 2.0 credentials file (Desktop App type) from Google Cloud Console with the Calendar API enabled.
+Requires an OAuth 2.0 credentials file (Desktop App type) from Google Cloud Console with Calendar API enabled.
 
 ```bash
 npx @kembec/gcal-mcp
 ```
 
-With Claude Desktop:
+Claude Desktop config (`~/Library/Application Support/Claude/claude_desktop_config.json` on macOS):
 
 ```json
 {
@@ -34,24 +30,24 @@ With Claude Desktop:
 
 ## First run
 
-On startup the server opens a browser for the OAuth flow. Once authorized, the token is saved locally — no need to repeat it. To add a second account: ask Claude to use the `manage-accounts` tool.
+On startup the server opens a browser for the OAuth flow. Token is saved locally — no need to repeat it. To add a second account ask Claude to use the `manage-accounts` tool.
 
-If the token expires (Google test mode, 7 days), re-authorize with:
+If the token expires (Google test mode expires after 7 days):
 
 ```bash
 npx @kembec/gcal-mcp auth
 ```
 
-## Available tools
+## Tools
 
-`list-calendars`, `list-events`, `search-events`, `get-event`, `create-event`, `update-event`, `delete-event`, `respond-to-event`, `get-freebusy`, `get-current-time`, `manage-accounts`
+`list-calendars` · `list-events` · `search-events` · `get-event` · `create-event` · `update-event` · `delete-event` · `respond-to-event` · `get-freebusy` · `get-current-time` · `manage-accounts`
 
 For OpenClaw see [OPENCLAW.md](./OPENCLAW.md).
-
-## Credits
-
-Original project: [nspady/google-calendar-mcp](https://github.com/nspady/google-calendar-mcp) by [@nspady](https://github.com/nspady). Published on npm as [`@cocal/google-calendar-mcp`](https://www.npmjs.com/package/@cocal/google-calendar-mcp).
 
 ## License
 
 MIT
+
+## Credits
+
+Original project: [nspady/google-calendar-mcp](https://github.com/nspady/google-calendar-mcp) by [@nspady](https://github.com/nspady), published as [`@cocal/google-calendar-mcp`](https://www.npmjs.com/package/@cocal/google-calendar-mcp). All credit for the design, implementation, and multi-account OAuth flow goes to the upstream author.
