@@ -1,5 +1,5 @@
 {
-  "name": "@cocal/google-calendar-mcp",
+  "name": "@kembec/gcal-mcp",
   "version": "2.6.1",
   "description": "Google Calendar MCP Server with extensive support for calendar management",
   "type": "module",
@@ -20,7 +20,9 @@
     "calendar",
     "ai",
     "llm",
-    "integration"
+    "integration",
+    "openclaw",
+    "model-context-protocol"
   ],
   "repository": {
     "type": "git",
