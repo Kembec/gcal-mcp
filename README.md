@@ -1,5 +1,11 @@
 # Google Calendar MCP Server
 
+> **kembec/gcal-mcp** is a security-hardened fork of [nspady/google-calendar-mcp](https://github.com/nspady/google-calendar-mcp) by [@nspady](https://github.com/nspady), published on npm as [`@cocal/google-calendar-mcp`](https://www.npmjs.com/package/@cocal/google-calendar-mcp).  
+> All credit for the original design, implementation, and multi-account OAuth flow goes to the upstream author.  
+> This fork adds: CVE fixes (`npm audit fix`), an HTTP transport CSRF patch, and [OpenClaw](https://openclaw.ai) compatibility. See [SECURITY_AUDIT.md](./SECURITY_AUDIT.md) and [OPENCLAW.md](./OPENCLAW.md).
+
+---
+
 A Model Context Protocol (MCP) server that provides Google Calendar integration for AI assistants like Claude.
 
 ## Features

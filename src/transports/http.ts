@@ -45,6 +45,8 @@ export class HttpTransportHandler {
   private server: McpServer;
   private config: HttpTransportConfig;
   private tokenManager: TokenManager;
+  /** CSRF state tokens: accountId → state. Cleared after successful exchange. */
+  private pendingStates: Map<string, string> = new Map();
 
   constructor(
     server: McpServer,
@@ -73,12 +75,14 @@ export class HttpTransportHandler {
 
   /**
    * Generates an OAuth authorization URL with standard settings.
+   * Includes a state parameter for CSRF protection.
    */
-  private generateOAuthUrl(client: import('google-auth-library').OAuth2Client): string {
+  private generateOAuthUrl(client: import('google-auth-library').OAuth2Client, state: string): string {
     return client.generateAuthUrl({
       access_type: 'offline',
       scope: ['https://www.googleapis.com/auth/calendar'],
-      prompt: 'consent'
+      prompt: 'consent',
+      state
     });
   }
 
@@ -253,9 +257,14 @@ export class HttpTransportHandler {
             return;
           }
 
-          // Generate OAuth URL for this account
+          // Generate CSRF state token and store it keyed by accountId
+          const { randomUUID } = await import('crypto');
+          const stateToken = randomUUID();
+          this.pendingStates.set(accountId, stateToken);
+
+          // Generate OAuth URL for this account (includes state for CSRF protection)
           const oauth2Client = await this.createOAuth2Client(accountId, host, port);
-          const authUrl = this.generateOAuthUrl(oauth2Client);
+          const authUrl = this.generateOAuthUrl(oauth2Client, stateToken);
 
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({
@@ -291,6 +300,18 @@ export class HttpTransportHandler {
             res.end('<h1>Error</h1><p>Account ID missing</p>');
             return;
           }
+
+          // Validate state parameter for CSRF protection
+          const returnedState = url.searchParams.get('state');
+          const expectedState = this.pendingStates.get(accountId);
+          if (!returnedState || !expectedState || returnedState !== expectedState) {
+            process.stderr.write(`OAuth callback rejected: invalid state parameter for account "${accountId}" (possible CSRF attempt)\n`);
+            res.writeHead(403, { 'Content-Type': 'text/html' });
+            res.end('<h1>Forbidden</h1><p>Invalid state parameter. This may indicate a CSRF attack or an expired authentication session. Please try authenticating again.</p>');
+            return;
+          }
+          // Consume the state token — single-use
+          this.pendingStates.delete(accountId);
 
           // Exchange code for tokens
           const oauth2Client = await this.createOAuth2Client(accountId, host, port);
@@ -390,9 +411,14 @@ export class HttpTransportHandler {
           // Validate account ID format
           await this.validateAccountId(accountId);
 
-          // Generate OAuth URL for re-authentication
+          // Generate CSRF state token and store it keyed by accountId
+          const { randomUUID: reAuthUUID } = await import('crypto');
+          const reAuthStateToken = reAuthUUID();
+          this.pendingStates.set(accountId, reAuthStateToken);
+
+          // Generate OAuth URL for re-authentication (includes state for CSRF protection)
           const oauth2Client = await this.createOAuth2Client(accountId, host, port);
-          const authUrl = this.generateOAuthUrl(oauth2Client);
+          const authUrl = this.generateOAuthUrl(oauth2Client, reAuthStateToken);
 
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({
