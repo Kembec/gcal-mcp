@@ -1,0 +1,14 @@
+{
+  "name": "@kembec/gcal-mcp-darwin-x64",
+  "version": "0.1.0",
+  "description": "gcal-mcp binary for darwin x64",
+  "os": ["darwin"],
+  "cpu": ["x64"],
+  "bin": {
+    "gcal-mcp": "bin/gcal-mcp"
+  },
+  "files": [
+    "bin/gcal-mcp"
+  ],
+  "license": "MIT"
+}

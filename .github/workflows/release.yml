@@ -1,0 +1,119 @@
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  build:
+    name: build ${{ matrix.target }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            platform_dir: npm-darwin-arm64
+            bin_name: gcal-mcp
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            platform_dir: npm-darwin-x64
+            bin_name: gcal-mcp
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            platform_dir: npm-linux-x64
+            bin_name: gcal-mcp
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            platform_dir: npm-win32-x64
+            bin_name: gcal-mcp.exe
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Cargo build
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Stage binary (unix)
+        if: runner.os != 'Windows'
+        run: |
+          mkdir -p ${{ matrix.platform_dir }}/bin
+          cp target/${{ matrix.target }}/release/gcal-mcp ${{ matrix.platform_dir }}/bin/${{ matrix.bin_name }}
+          chmod +x ${{ matrix.platform_dir }}/bin/${{ matrix.bin_name }}
+
+      - name: Stage binary (windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path "${{ matrix.platform_dir }}/bin" | Out-Null
+          Copy-Item "target/${{ matrix.target }}/release/gcal-mcp.exe" "${{ matrix.platform_dir }}/bin/${{ matrix.bin_name }}"
+
+      - name: Upload platform package
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.platform_dir }}
+          path: ${{ matrix.platform_dir }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Place artifacts in repo layout
+        run: |
+          for dir in npm-darwin-arm64 npm-darwin-x64 npm-linux-x64 npm-win32-x64; do
+            if [ -d "artifacts/${dir}/bin" ]; then
+              rm -rf "${dir}/bin"
+              mv "artifacts/${dir}/bin" "${dir}/bin"
+            fi
+          done
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            npm-darwin-arm64/bin/gcal-mcp
+            npm-darwin-x64/bin/gcal-mcp
+            npm-linux-x64/bin/gcal-mcp
+            npm-win32-x64/bin/gcal-mcp.exe
+          fail_on_unmatched_files: false
+
+      - name: Publish platform packages
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          for dir in npm-darwin-arm64 npm-darwin-x64 npm-linux-x64 npm-win32-x64; do
+            (cd "$dir" && npm publish --access public --provenance)
+          done
+
+      - name: Publish main package
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          cd npm
+          npm publish --access public --provenance

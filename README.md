@@ -1,53 +1,56 @@
 # gcal-mcp
 
-MCP server for Google Calendar. Fork of `@cocal/google-calendar-mcp` with security patches and OpenClaw support.
+An MCP server that exposes Google Calendar as tools for any model that speaks the Model Context Protocol.
 
-This fork adds: 7 CVEs fixed, CSRF patch on the HTTP transport, and a ready-to-use OpenClaw config. See [SECURITY_AUDIT.md](./SECURITY_AUDIT.md) and [OPENCLAW.md](./OPENCLAW.md).
+The binary talks JSON-RPC 2.0 over stdio, the same way language servers and other MCP servers do. It handles the Google OAuth2 PKCE flow itself — point it at a downloaded OAuth client JSON, run it once, and tokens are cached under `~/.config/kembec/gcal-mcp/tokens/`. The server stays small (a single Rust binary, no daemon) and reuses one refresh token per account.
 
-## Installation
+## Install
 
-Requires an OAuth 2.0 credentials file (Desktop App type) from Google Cloud Console with Calendar API enabled.
-
-```bash
-npx @kembec/gcal-mcp
+```sh
+npm install -g @kembec/gcal-mcp
 ```
 
-Claude Desktop config (`~/Library/Application Support/Claude/claude_desktop_config.json` on macOS):
+The umbrella package only ships a thin Node launcher; the actual binary comes from the matching `@kembec/gcal-mcp-<platform>` optional dependency that npm picks at install time. Supported targets: `darwin-arm64`, `darwin-x64`, `linux-x64`, `win32-x64`.
+
+You can also build from source:
+
+```sh
+git clone <this-repo>
+cd gcal-mcp
+cargo build --release
+# binary at target/release/gcal-mcp
+```
+
+## Configure
+
+1. Create an OAuth client in the Google Cloud Console. Choose "Desktop app". Download the resulting JSON.
+2. Point the server at it:
+
+   ```sh
+   export GOOGLE_OAUTH_CREDENTIALS=/path/to/client_secret.json
+   ```
+
+3. On the first tool call that needs the API, the server opens a browser, waits for the callback on `http://127.0.0.1:8080/callback`, and writes a token file. Subsequent runs refresh silently.
+
+The Calendar scope used is `https://www.googleapis.com/auth/calendar`.
+
+## Use from an MCP client
+
+Add the binary to your client config (Claude Desktop, OpenClaw, etc.) as a stdio MCP server:
 
 ```json
 {
-  "mcpServers": {
-    "google-calendar": {
-      "command": "npx",
-      "args": ["@kembec/gcal-mcp"],
-      "env": {
-        "GOOGLE_OAUTH_CREDENTIALS": "/path/to/gcp-oauth.keys.json"
-      }
-    }
+  "command": "gcal-mcp",
+  "env": {
+    "GOOGLE_OAUTH_CREDENTIALS": "/path/to/client_secret.json"
   }
 }
 ```
 
-## First run
+The server advertises 11 tools: `list-calendars`, `list-events`, `search-events`, `get-event`, `create-event`, `update-event`, `delete-event`, `respond-to-event`, `get-freebusy`, `get-current-time`, and `manage-accounts`. Each one takes a JSON `arguments` object; required fields are validated up front and reported as `-32602` errors. `manage-accounts` is the entry point for adding or removing additional Google accounts — most other tools accept an optional `account` field to pick which stored token to use.
 
-On startup the server opens a browser for the OAuth flow. Token is saved locally — no need to repeat it. To add a second account ask Claude to use the `manage-accounts` tool.
-
-If the token expires (Google test mode expires after 7 days):
-
-```bash
-npx @kembec/gcal-mcp auth
-```
-
-## Tools
-
-`list-calendars` · `list-events` · `search-events` · `get-event` · `create-event` · `update-event` · `delete-event` · `respond-to-event` · `get-freebusy` · `get-current-time` · `manage-accounts`
-
-For OpenClaw see [OPENCLAW.md](./OPENCLAW.md).
+Datetimes are RFC3339 (e.g. `2026-05-14T10:00:00-05:00`). Pass `YYYY-MM-DD` to `start`/`end` of `create-event` to make an all-day event. Pass an IANA `timezone` to attach a `timeZone` to dated events.
 
 ## License
 
-MIT
-
-## Credits
-
-Original project: [nspady/google-calendar-mcp](https://github.com/nspady/google-calendar-mcp) by [@nspady](https://github.com/nspady), published as [`@cocal/google-calendar-mcp`](https://www.npmjs.com/package/@cocal/google-calendar-mcp). All credit for the design, implementation, and multi-account OAuth flow goes to the upstream author.
+MIT.

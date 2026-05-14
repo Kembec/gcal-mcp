@@ -1,0 +1,14 @@
+{
+  "name": "@kembec/gcal-mcp-win32-x64",
+  "version": "0.1.0",
+  "description": "gcal-mcp binary for win32 x64",
+  "os": ["win32"],
+  "cpu": ["x64"],
+  "bin": {
+    "gcal-mcp": "bin/gcal-mcp.exe"
+  },
+  "files": [
+    "bin/gcal-mcp.exe"
+  ],
+  "license": "MIT"
+}
