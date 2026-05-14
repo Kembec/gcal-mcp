@@ -10,5 +10,9 @@
   "files": [
     "bin/gcal-mcp"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Kembec/gcal-mcp.git"
+  },
   "license": "MIT"
 }

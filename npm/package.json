@@ -16,6 +16,10 @@
     "@kembec/gcal-mcp-linux-x64": "0.1.0",
     "@kembec/gcal-mcp-win32-x64": "0.1.0"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Kembec/gcal-mcp.git"
+  },
   "license": "MIT",
   "engines": {
     "node": ">=18"
