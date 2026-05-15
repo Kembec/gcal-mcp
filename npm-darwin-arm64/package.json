@@ -1,6 +1,6 @@
 {
   "name": "@kembec/gcal-mcp-darwin-arm64",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "gcal-mcp binary for darwin arm64",
   "os": ["darwin"],
   "cpu": ["arm64"],
