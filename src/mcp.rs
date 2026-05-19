@@ -50,6 +50,11 @@ impl ServerState {
     pub fn new() -> Result<Self> {
         let token_dir = default_token_dir()?;
         std::fs::create_dir_all(&token_dir).ok();
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let _ = std::fs::set_permissions(&token_dir, std::fs::Permissions::from_mode(0o700));
+        }
 
         let credentials_path = std::env::var("GOOGLE_OAUTH_CREDENTIALS")
             .ok()

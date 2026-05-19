@@ -1,8 +1,10 @@
 # gcal-mcp
 
-An MCP server that exposes Google Calendar as tools for any model that speaks the Model Context Protocol.
+MCP server for Google Calendar. Single Rust binary, no daemon, handles OAuth2 PKCE itself — point it at a credentials JSON, authorize once, tokens refresh silently.
 
-The binary talks JSON-RPC 2.0 over stdio, the same way language servers and other MCP servers do. It handles the Google OAuth2 PKCE flow itself — point it at a downloaded OAuth client JSON, run it once, and tokens are cached under `~/.config/kembec/gcal-mcp/tokens/`. The server stays small (a single Rust binary, no daemon) and reuses one refresh token per account.
+[![npm](https://img.shields.io/npm/v/@kembec/gcal-mcp)](https://www.npmjs.com/package/@kembec/gcal-mcp)
+[![license](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![platforms](https://img.shields.io/badge/platforms-macOS%20%7C%20Linux%20%7C%20Windows-lightgrey)](#)
 
 ## Install
 
@@ -10,46 +12,91 @@ The binary talks JSON-RPC 2.0 over stdio, the same way language servers and othe
 npm install -g @kembec/gcal-mcp
 ```
 
-The umbrella package only ships a thin Node launcher; the actual binary comes from the matching `@kembec/gcal-mcp-<platform>` optional dependency that npm picks at install time. Supported targets: `darwin-arm64`, `darwin-x64`, `linux-x64`, `win32-x64`.
+Supported targets: `darwin-arm64`, `darwin-x64`, `linux-x64`, `win32-x64`.
 
-You can also build from source:
+Or build from source:
 
 ```sh
-git clone <this-repo>
+git clone https://github.com/Kembec/gcal-mcp.git
 cd gcal-mcp
 cargo build --release
-# binary at target/release/gcal-mcp
 ```
 
 ## Configure
 
-1. Create an OAuth client in the Google Cloud Console. Choose "Desktop app". Download the resulting JSON.
-2. Point the server at it:
+1. Create an OAuth client in the [Google Cloud Console](https://console.cloud.google.com). Choose **Desktop app**. Download the JSON.
+2. Set the env var pointing to it:
 
-   ```sh
-   export GOOGLE_OAUTH_CREDENTIALS=/path/to/client_secret.json
-   ```
+```sh
+export GOOGLE_OAUTH_CREDENTIALS=/path/to/client_secret.json
+```
 
-3. On the first tool call that needs the API, the server opens a browser, waits for the callback on `http://127.0.0.1:8080/callback`, and writes a token file. Subsequent runs refresh silently.
+3. On the first tool call the server opens a browser for authorization, catches the callback on a random local port, and writes a token under `~/.config/kembec/gcal-mcp/tokens/`. Subsequent runs refresh silently.
 
 The Calendar scope used is `https://www.googleapis.com/auth/calendar`.
 
-## Use from an MCP client
+## Add to your MCP client
 
-Add the binary to your client config (Claude Desktop, OpenClaw, etc.) as a stdio MCP server:
+### Cursor / Claude Desktop
 
 ```json
 {
-  "command": "gcal-mcp",
-  "env": {
-    "GOOGLE_OAUTH_CREDENTIALS": "/path/to/client_secret.json"
+  "mcpServers": {
+    "gcal": {
+      "command": "gcal-mcp",
+      "env": {
+        "GOOGLE_OAUTH_CREDENTIALS": "/path/to/client_secret.json"
+      }
+    }
   }
 }
 ```
 
-The server advertises 11 tools: `list-calendars`, `list-events`, `search-events`, `get-event`, `create-event`, `update-event`, `delete-event`, `respond-to-event`, `get-freebusy`, `get-current-time`, and `manage-accounts`. Each one takes a JSON `arguments` object; required fields are validated up front and reported as `-32602` errors. `manage-accounts` is the entry point for adding or removing additional Google accounts — most other tools accept an optional `account` field to pick which stored token to use.
+Or with `npx`:
 
-Datetimes are RFC3339 (e.g. `2026-05-14T10:00:00-05:00`). Pass `YYYY-MM-DD` to `start`/`end` of `create-event` to make an all-day event. Pass an IANA `timezone` to attach a `timeZone` to dated events.
+```json
+{
+  "mcpServers": {
+    "gcal": {
+      "command": "npx",
+      "args": ["-y", "@kembec/gcal-mcp"],
+      "env": {
+        "GOOGLE_OAUTH_CREDENTIALS": "/path/to/client_secret.json"
+      }
+    }
+  }
+}
+```
+
+## Tools
+
+| Tool | Description |
+|------|-------------|
+| `list-calendars` | List all calendars on the account |
+| `list-events` | List events from a calendar with optional time window |
+| `search-events` | Full-text search over events |
+| `get-event` | Fetch a single event by id |
+| `create-event` | Create an event (RFC3339 or `YYYY-MM-DD` for all-day) |
+| `update-event` | Patch an existing event |
+| `delete-event` | Delete an event |
+| `respond-to-event` | Accept / decline / tentative an invitation |
+| `get-freebusy` | Query free/busy windows across calendars |
+| `get-current-time` | Return current UTC time |
+| `manage-accounts` | Add, list, or remove stored OAuth accounts |
+
+All tools accept an optional `account` field to select which stored token to use (defaults to `"default"`).
+
+## Multi-account
+
+```json
+{ "name": "manage-accounts", "arguments": { "action": "add", "account_name": "work" } }
+```
+
+Then pass `"account": "work"` to any tool.
+
+## Token storage
+
+Tokens live in `~/.config/kembec/gcal-mcp/tokens/<account>.json` with `0600` permissions (Unix). The directory is `0700`.
 
 ## License
 

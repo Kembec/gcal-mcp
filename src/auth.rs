@@ -8,8 +8,6 @@ use std::time::Duration;
 pub const SCOPE: &str = "https://www.googleapis.com/auth/calendar";
 pub const AUTH_URL: &str = "https://accounts.google.com/o/oauth2/v2/auth";
 pub const TOKEN_URL: &str = "https://oauth2.googleapis.com/token";
-pub const REDIRECT_PORT: u16 = 8080;
-pub const REDIRECT_URI: &str = "http://127.0.0.1:8080/callback";
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct StoredToken {
@@ -94,6 +92,11 @@ pub fn save_token(token_dir: &Path, account: &str, token: &StoredToken) -> Resul
     let path = token_path(token_dir, account);
     let raw = serde_json::to_string_pretty(token)?;
     std::fs::write(&path, raw).with_context(|| format!("write token file {}", path.display()))?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600))?;
+    }
     Ok(())
 }
 
@@ -139,25 +142,11 @@ fn pkce_pair() -> (String, String) {
 }
 
 fn rand_bytes() -> [u8; 32] {
-    // Mix several entropy sources without bringing in a separate crate.
     let mut buf = [0u8; 32];
-    let now = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|d| d.as_nanos())
-        .unwrap_or(0);
-    let pid = std::process::id() as u128;
-    let mix = now.wrapping_mul(6364136223846793005).wrapping_add(pid);
-    for (i, chunk) in buf.chunks_mut(16).enumerate() {
-        let v = mix
-            .wrapping_add((i as u128).wrapping_mul(1442695040888963407))
-            .to_le_bytes();
-        chunk.copy_from_slice(&v[..chunk.len()]);
-    }
-    // Add a uuid v4 worth of entropy on top.
-    let uid = uuid::Uuid::new_v4();
-    for (b, u) in buf.iter_mut().zip(uid.as_bytes()) {
-        *b ^= *u;
-    }
+    let a = uuid::Uuid::new_v4();
+    let b = uuid::Uuid::new_v4();
+    buf[..16].copy_from_slice(a.as_bytes());
+    buf[16..].copy_from_slice(b.as_bytes());
     buf
 }
 
@@ -302,12 +291,13 @@ pub async fn exchange_code(
     creds: &OAuthCredentials,
     code: &str,
     verifier: &str,
+    redirect_uri: &str,
 ) -> Result<TokenResponse> {
     let mut form = vec![
         ("client_id", creds.client_id.as_str()),
         ("grant_type", "authorization_code"),
         ("code", code),
-        ("redirect_uri", REDIRECT_URI),
+        ("redirect_uri", redirect_uri),
         ("code_verifier", verifier),
     ];
     if let Some(s) = creds.client_secret.as_deref() {
@@ -328,10 +318,18 @@ pub async fn exchange_code(
     Ok(parsed)
 }
 
+fn find_free_port() -> Result<u16> {
+    let listener = std::net::TcpListener::bind("127.0.0.1:0")?;
+    Ok(listener.local_addr()?.port())
+}
+
 pub async fn interactive_login(
     http: &reqwest::Client,
     creds: &OAuthCredentials,
 ) -> Result<StoredToken> {
+    let port = find_free_port()?;
+    let redirect_uri = format!("http://127.0.0.1:{port}/callback");
+
     let (verifier, challenge) = pkce_pair();
     let state_param = uuid::Uuid::new_v4().to_string();
 
@@ -339,7 +337,7 @@ pub async fn interactive_login(
     authorize
         .query_pairs_mut()
         .append_pair("client_id", &creds.client_id)
-        .append_pair("redirect_uri", REDIRECT_URI)
+        .append_pair("redirect_uri", &redirect_uri)
         .append_pair("response_type", "code")
         .append_pair("scope", SCOPE)
         .append_pair("code_challenge", &challenge)
@@ -351,13 +349,13 @@ pub async fn interactive_login(
     let url_string = authorize.to_string();
     eprintln!("Open this URL in a browser to authorize gcal-mcp:");
     eprintln!("{url_string}");
-    // Best-effort browser open; ignore failures (headless environments).
     let _ = open::that(url_string);
 
     let (tx, rx) = mpsc::channel::<Result<String, String>>();
     let expected_state = state_param.clone();
+    let bind_addr = format!("127.0.0.1:{port}");
     std::thread::spawn(move || {
-        let server = match tiny_http::Server::http(format!("127.0.0.1:{}", REDIRECT_PORT)) {
+        let server = match tiny_http::Server::http(&bind_addr) {
             Ok(s) => s,
             Err(e) => {
                 let _ = tx.send(Err(format!("failed to start local server: {e}")));
@@ -418,7 +416,7 @@ pub async fn interactive_login(
     .map_err(|e| anyhow!("oauth callback task panicked: {e}"))?
     .map_err(|e| anyhow!("{e}"))?;
 
-    let tok = exchange_code(http, creds, &code, &verifier).await?;
+    let tok = exchange_code(http, creds, &code, &verifier, &redirect_uri).await?;
     let refresh = tok
         .refresh_token
         .ok_or_else(|| anyhow!("Google did not return a refresh_token"))?;
