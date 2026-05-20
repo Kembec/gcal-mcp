@@ -1,18 +1,19 @@
 {
-  "name": "@kembec/gcal-mcp-linux-x64",
+  "name": "@kembec/gcal-mcp-linux-arm64",
   "version": "0.1.3",
-  "description": "gcal-mcp binary for linux x64",
+  "description": "gcal-mcp binary for linux arm64",
   "os": [
     "linux"
   ],
   "cpu": [
-    "x64"
+    "arm64"
   ],
   "bin": {
     "gcal-mcp": "bin/gcal-mcp"
   },
   "files": [
-    "bin/gcal-mcp"
+    "bin/gcal-mcp",
+    "README.md"
   ],
   "repository": {
     "type": "git",

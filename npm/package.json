@@ -1,6 +1,6 @@
 {
   "name": "@kembec/gcal-mcp",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "MCP server for Google Calendar",
   "bin": {
     "gcal-mcp": "./index.js"
@@ -11,10 +11,11 @@
     "README.md"
   ],
   "optionalDependencies": {
-    "@kembec/gcal-mcp-darwin-arm64": "0.1.2",
-    "@kembec/gcal-mcp-darwin-x64": "0.1.2",
-    "@kembec/gcal-mcp-linux-x64": "0.1.2",
-    "@kembec/gcal-mcp-win32-x64": "0.1.2"
+    "@kembec/gcal-mcp-darwin-arm64": "0.1.3",
+    "@kembec/gcal-mcp-darwin-x64": "0.1.3",
+    "@kembec/gcal-mcp-linux-x64": "0.1.3",
+    "@kembec/gcal-mcp-linux-arm64": "0.1.3",
+    "@kembec/gcal-mcp-win32-x64": "0.1.3"
   },
   "repository": {
     "type": "git",

@@ -12,7 +12,7 @@ MCP server for Google Calendar. Single Rust binary, no daemon, handles OAuth2 PK
 npm install -g @kembec/gcal-mcp
 ```
 
-Supported targets: `darwin-arm64`, `darwin-x64`, `linux-x64`, `win32-x64`.
+Supported targets: `darwin-arm64`, `darwin-x64`, `linux-x64`, `linux-arm64`, `win32-x64`.
 
 Or build from source:
 
@@ -66,6 +66,20 @@ Or with `npx`:
     }
   }
 }
+```
+
+### Codex CLI
+
+Add to `~/.codex/config.toml`:
+
+```toml
+[mcp_servers.gcal]
+command = "npx"
+args = ["-y", "@kembec/gcal-mcp"]
+enabled = true
+
+[mcp_servers.gcal.env]
+GOOGLE_OAUTH_CREDENTIALS = "/path/to/client_secret.json"
 ```
 
 ## Tools
