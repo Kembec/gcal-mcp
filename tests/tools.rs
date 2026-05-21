@@ -18,10 +18,7 @@ mod mcp;
 mod tools;
 
 fn state() -> Arc<mcp::ServerState> {
-    let tmp = std::env::temp_dir().join(format!(
-        "gcal-mcp-test-tools-{}",
-        std::process::id()
-    ));
+    let tmp = std::env::temp_dir().join(format!("gcal-mcp-test-tools-{}", std::process::id()));
     std::fs::create_dir_all(&tmp).unwrap();
     Arc::new(mcp::ServerState {
         http: reqwest::Client::new(),
@@ -173,8 +170,7 @@ async fn test_build_event_datetime_all_day() {
 
 #[tokio::test]
 async fn test_build_event_datetime_with_timezone() {
-    let v = tools::build_event_datetime("2026-05-14T10:00:00-05:00", Some("America/Lima"))
-        .unwrap();
+    let v = tools::build_event_datetime("2026-05-14T10:00:00-05:00", Some("America/Lima")).unwrap();
     assert_eq!(v["dateTime"], "2026-05-14T10:00:00-05:00");
     assert_eq!(v["timeZone"], "America/Lima");
 }

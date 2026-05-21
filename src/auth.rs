@@ -70,7 +70,13 @@ pub fn load_credentials(path: Option<&Path>) -> Result<OAuthCredentials> {
 pub fn token_path(token_dir: &Path, account: &str) -> PathBuf {
     let safe = account
         .chars()
-        .map(|c| if c.is_ascii_alphanumeric() || c == '-' || c == '_' || c == '.' || c == '@' { c } else { '_' })
+        .map(|c| {
+            if c.is_ascii_alphanumeric() || c == '-' || c == '_' || c == '.' || c == '@' {
+                c
+            } else {
+                '_'
+            }
+        })
         .collect::<String>();
     token_dir.join(format!("{}.json", safe))
 }
@@ -185,9 +191,9 @@ fn sha256(message: &[u8]) -> [u8; 32] {
 
     for chunk in data.chunks(64) {
         let mut w = [0u32; 64];
-        for i in 0..16 {
+        for (i, item) in w.iter_mut().enumerate().take(16) {
             let j = i * 4;
-            w[i] = u32::from_be_bytes([chunk[j], chunk[j + 1], chunk[j + 2], chunk[j + 3]]);
+            *item = u32::from_be_bytes([chunk[j], chunk[j + 1], chunk[j + 2], chunk[j + 3]]);
         }
         for i in 16..64 {
             let s0 = w[i - 15].rotate_right(7) ^ w[i - 15].rotate_right(18) ^ (w[i - 15] >> 3);
@@ -385,12 +391,11 @@ pub async fn interactive_login(
             } else {
                 "Invalid response. You may close this tab.".to_string()
             };
-            let response = tiny_http::Response::from_string(response_body)
-                .with_header(
-                    "Content-Type: text/plain"
-                        .parse::<tiny_http::Header>()
-                        .unwrap(),
-                );
+            let response = tiny_http::Response::from_string(response_body).with_header(
+                "Content-Type: text/plain"
+                    .parse::<tiny_http::Header>()
+                    .unwrap(),
+            );
             let _ = request.respond(response);
 
             if let Some(err) = error {

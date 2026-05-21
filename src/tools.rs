@@ -252,7 +252,9 @@ fn opt_i64(args: &Value, field: &str) -> Result<Option<i64>> {
             .as_i64()
             .ok_or_else(|| invalid_params(format!("field '{field}' must be an integer")))
             .map(Some),
-        _ => Err(invalid_params(format!("field '{field}' must be an integer"))),
+        _ => Err(invalid_params(format!(
+            "field '{field}' must be an integer"
+        ))),
     }
 }
 
@@ -286,7 +288,7 @@ fn require_str_array(args: &Value, field: &str) -> Result<Vec<String>> {
     Ok(arr)
 }
 
-fn account_name<'a>(args: &'a Value) -> &'a str {
+fn account_name(args: &Value) -> &str {
     args.get("account")
         .and_then(|v| v.as_str())
         .filter(|s| !s.is_empty())

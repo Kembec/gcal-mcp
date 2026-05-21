@@ -40,7 +40,9 @@ async fn main() -> Result<()> {
 
 async fn cmd_auth() -> Result<()> {
     let state = mcp::ServerState::new()?;
-    let account = std::env::args().nth(2).unwrap_or_else(|| "default".to_string());
+    let account = std::env::args()
+        .nth(2)
+        .unwrap_or_else(|| "default".to_string());
     eprintln!("Authenticating account '{account}'...");
     let token = auth::get_token(
         &state.http,
@@ -50,6 +52,9 @@ async fn cmd_auth() -> Result<()> {
     )
     .await?;
     eprintln!("Authentication successful. Token saved.");
-    eprintln!("Access token (first 20 chars): {}...", &token[..token.len().min(20)]);
+    eprintln!(
+        "Access token (first 20 chars): {}...",
+        &token[..token.len().min(20)]
+    );
     Ok(())
 }
