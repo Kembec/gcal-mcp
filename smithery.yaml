@@ -1,0 +1,16 @@
+startCommand:
+  type: stdio
+  configSchema:
+    type: object
+    properties:
+      GOOGLE_OAUTH_CREDENTIALS:
+        type: string
+        description: "Path to the OAuth 2.0 client secrets JSON downloaded from Google Cloud Console (Desktop app type)"
+    required:
+      - GOOGLE_OAUTH_CREDENTIALS
+  commandFunction: |
+    (config) => ({
+      command: "npx",
+      args: ["-y", "@kembec/gcal-mcp"],
+      env: { GOOGLE_OAUTH_CREDENTIALS: config.GOOGLE_OAUTH_CREDENTIALS }
+    })
